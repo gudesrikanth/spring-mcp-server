@@ -53,6 +53,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          audience: ://amazonaws.com
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
