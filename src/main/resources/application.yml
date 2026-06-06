@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: spring-mcp-server
+  ai:
+    mcp:
+      server:
+        # Declarative annotation scanning discovers @McpTool/@McpResource/@McpPrompt beans.
+        annotation-scanner:
+          enabled: true
+        name: spring-mcp-server
+        version: 0.1.0
+        type: sync
+        # Streamable HTTP transport. The MCP endpoint is exposed at /mcp (see below).
+        protocol: streamable
+        streamable-http:
+          mcp-endpoint: /mcp
+        instructions: >
+          A learning/portfolio MCP server built with Spring AI. It offers stateless developer
+          "toolbox" utilities (uuid, base64, hashing, JSON, regex, epoch conversion) and a
+          DynamoDB-backed Task manager exposed as tools, resources (task://{id}, tasks://all)
+          and prompts (plan_my_day, triage_tasks).
+        capabilities:
+          tool: true
+          resource: true
+          prompt: true
+          completion: true
+
+server:
+  port: 8080
+
+# DynamoDB wiring (see DynamoDbConfig). In AWS these defaults are used and the IAM
+# instance role supplies credentials. Locally, set APP_DYNAMODB_ENDPOINT to DynamoDB Local.
+app:
+  dynamodb:
+    endpoint: ${APP_DYNAMODB_ENDPOINT:}
+    region: ${AWS_REGION:us-east-1}
+    table-name: ${APP_DYNAMODB_TABLE:mcp-tasks}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    # Don't fail the actuator health check just because DynamoDB isn't reachable in a
+    # minimal demo; the MCP server itself is still up.
+    defaults:
+      enabled: true

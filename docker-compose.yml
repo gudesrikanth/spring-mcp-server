@@ -1,0 +1,30 @@
+# Local end-to-end stack: the MCP server + a local DynamoDB.
+# Usage:
+#   docker compose up --build
+#   ./scripts/smoke-test.sh http://localhost:8080
+#
+# The MCP endpoint is then available at http://localhost:8080/mcp
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:2.5.2
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    ports:
+      - "8000:8000"
+
+  mcp-server:
+    build: .
+    depends_on:
+      - dynamodb-local
+    ports:
+      - "8080:8080"
+    environment:
+      # Point the app at the local DynamoDB container (see DynamoDbConfig).
+      APP_DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: us-east-1
+      APP_DYNAMODB_TABLE: mcp-tasks
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 45s
