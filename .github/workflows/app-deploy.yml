@@ -93,16 +93,20 @@ jobs:
           docker build -t "$IMAGE:$IMAGE_TAG" -t "$IMAGE:latest" .
 
       - name: 4 — Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
-          format: table
-          # Report HIGH/CRITICAL findings but don't block the demo deploy — the
-          # remaining issues are unfixed/base-image OS CVEs. Set exit-code to "1"
-          # to turn this into a hard gate once you maintain a hardened base image.
-          exit-code: "0"
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
+        # Run Trivy from its official image (robust on CI vs. the binary
+        # installer). It scans the locally-built image via the Docker socket.
+        # Reports HIGH/CRITICAL but doesn't block the demo deploy (--exit-code 0);
+        # change to --exit-code 1 to make it a hard gate.
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.65.0 image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --no-progress \
+            --exit-code 0 \
+            --format table \
+            "$IMAGE:$IMAGE_TAG"
 
       - name: 5 — Push image to ECR
         run: |
