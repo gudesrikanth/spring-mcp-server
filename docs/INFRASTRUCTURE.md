@@ -3,7 +3,7 @@
 All infrastructure is Terraform, split into two stacks:
 
 - **`infra/terraform/bootstrap/`** — run once, locally. Creates the remote state
-  backend and the GitHub OIDC role. See its
+  backend and the CI IAM user + access key. See its
   [README](../infra/terraform/bootstrap/README.md).
 - **`infra/terraform/`** — the main stack, normally applied by the `infra.yml`
   workflow. See its [README](../infra/terraform/README.md).
@@ -26,8 +26,10 @@ All infrastructure is Terraform, split into two stacks:
 - **No SSH.** There's no port 22 and no key pair. Administration and deployment
   happen through **AWS Systems Manager (SSM)** using the instance role — fewer
   moving parts and no inbound shell exposure.
-- **OIDC, no static keys.** GitHub Actions assumes an IAM role via OpenID
-  Connect; there are no `AWS_ACCESS_KEY_ID` secrets to leak.
+- **CI access key.** GitHub Actions authenticates with a dedicated IAM user's
+  access key stored as encrypted Actions secrets. Simple to set up; the trade-off
+  is a long-lived static credential — rotate it, or delete the user when done.
+  (GitHub OIDC, which avoids stored keys, is a more secure alternative.)
 - **IMDSv2 required**, EBS encrypted, scoped DynamoDB policy (only the one
   table).
 - **Known trade-offs (demo):** plain HTTP, endpoint open to `0.0.0.0/0`, no MCP

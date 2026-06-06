@@ -37,7 +37,7 @@ server.
 - **DynamoDB** (AWS SDK v2 enhanced client) for task storage
 - **Docker** (multi-stage) + **docker-compose** for a one-command local stack
 - **Terraform** for AWS Free-Tier infra (ECR, EC2 `t3.micro`, DynamoDB, IAM, EIP)
-- **GitHub Actions** with **OIDC** (no static AWS keys): Terraform pipeline +
+- **GitHub Actions** (IAM access-key auth): Terraform pipeline +
   build → test → scan → push → deploy → functional-test pipeline
 
 ## Architecture
@@ -98,10 +98,11 @@ examples live in [`clients/`](clients/).
 
 ## Deploy to AWS (Free Tier)
 
-1. **Bootstrap once** (state backend + GitHub OIDC role):
+1. **Bootstrap once** (state backend + CI IAM user/access key):
    [`infra/terraform/bootstrap/README.md`](infra/terraform/bootstrap/README.md).
-2. Add the resulting values as GitHub Actions **variables**
-   (`AWS_ROLE_ARN`, `AWS_REGION`, `TF_STATE_BUCKET`, `TF_LOCK_TABLE`).
+2. Add the resulting values to GitHub Actions — secrets
+   `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`; variables
+   `TF_STATE_BUCKET`, `TF_LOCK_TABLE`.
 3. Push to `main`: the **Infra** workflow provisions AWS, then **App CI/CD**
    builds, scans, pushes, deploys, and smoke-tests the live server.
 

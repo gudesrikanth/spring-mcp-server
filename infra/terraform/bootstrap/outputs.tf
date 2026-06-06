@@ -8,12 +8,18 @@ output "lock_table" {
   value       = aws_dynamodb_table.tf_lock.name
 }
 
-output "github_actions_role_arn" {
-  description = "Set this as the AWS_ROLE_ARN GitHub Actions variable/secret."
-  value       = aws_iam_role.github_actions.arn
-}
-
 output "region" {
   description = "AWS region. Set as the AWS_REGION GitHub Actions variable."
   value       = var.aws_region
+}
+
+output "aws_access_key_id" {
+  description = "Set this as the AWS_ACCESS_KEY_ID GitHub Actions secret."
+  value       = aws_iam_access_key.ci.id
+}
+
+output "aws_secret_access_key" {
+  description = "Set this as the AWS_SECRET_ACCESS_KEY GitHub Actions secret. Read with: tofu output -raw aws_secret_access_key"
+  value       = aws_iam_access_key.ci.secret
+  sensitive   = true
 }

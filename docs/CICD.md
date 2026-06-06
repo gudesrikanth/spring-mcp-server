@@ -1,14 +1,16 @@
 # CI/CD pipelines
 
-Two GitHub Actions workflows, both authenticating to AWS via **OIDC** (no stored
-keys). They read these repo **Actions variables** (from the bootstrap outputs):
+Two GitHub Actions workflows, both authenticating to AWS with an **IAM access
+key** (created by the bootstrap stack). They read these repo Actions
+secrets/variables (from the bootstrap outputs):
 
-| Variable | Used by | Value |
-| --- | --- | --- |
-| `AWS_ROLE_ARN` | both | `github_actions_role_arn` output |
-| `AWS_REGION` | both | e.g. `us-east-1` |
-| `TF_STATE_BUCKET` | infra | `state_bucket` output |
-| `TF_LOCK_TABLE` | infra | `lock_table` output |
+| Name | Type | Used by | Value |
+| --- | --- | --- | --- |
+| `AWS_ACCESS_KEY_ID` | Secret | both | `aws_access_key_id` output |
+| `AWS_SECRET_ACCESS_KEY` | Secret | both | `aws_secret_access_key` output |
+| `AWS_REGION` | Secret | both | e.g. `us-east-1` |
+| `TF_STATE_BUCKET` | Variable | infra | `state_bucket` output |
+| `TF_LOCK_TABLE` | Variable | infra | `lock_table` output |
 
 ## 1. Infra — [`infra.yml`](../.github/workflows/infra.yml)
 
@@ -20,7 +22,7 @@ Provisions/updates AWS with Terraform.
 | Push to `main` | fmt → init → validate → plan → **apply** |
 | Manual (`workflow_dispatch`) | choose `plan`, `apply`, or `destroy` |
 
-Steps: checkout → setup Terraform → **AWS OIDC login** → `fmt -check` →
+Steps: checkout → setup Terraform → **AWS credentials** → `fmt -check` →
 `init` (S3 backend) → `validate` → `plan` → (`apply`/`destroy`) → print outputs.
 
 ## 2. App CI/CD — [`app-deploy.yml`](../.github/workflows/app-deploy.yml)
@@ -61,7 +63,7 @@ A job summary prints the image tag and the live MCP endpoint.
 ## First-time setup checklist
 
 1. Run the [bootstrap](../infra/terraform/bootstrap/README.md).
-2. Add the four Actions variables above.
+2. Add the Actions secrets + variables above.
 3. Push to `main` → Infra workflow runs → then App CI/CD deploys.
 4. Open the endpoint from the job summary and connect a client
    ([HOW-CLIENTS-CONNECT.md](HOW-CLIENTS-CONNECT.md)).

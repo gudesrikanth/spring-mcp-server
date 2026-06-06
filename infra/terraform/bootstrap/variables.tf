@@ -5,13 +5,7 @@ variable "aws_region" {
 }
 
 variable "project_name" {
-  description = "Prefix used to name resources (bucket, lock table, roles)."
+  description = "Prefix used to name resources (bucket, lock table, CI user)."
   type        = string
   default     = "spring-mcp-server"
-}
-
-variable "github_repo" {
-  description = "GitHub repository allowed to assume the CI role, as 'owner/repo'."
-  type        = string
-  # Example: "srikanth-gude/spring-mcp-server"
 }

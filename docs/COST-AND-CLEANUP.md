@@ -35,9 +35,9 @@ terraform destroy \
   -backend-config="region=<REGION>"
 # (or run the Infra workflow with action = destroy)
 
-# 2. Bootstrap (state bucket, lock table, OIDC role) — last
+# 2. Bootstrap (state bucket, lock table, CI IAM user) — last
 cd bootstrap
-terraform destroy -var="github_repo=<owner/repo>"
+terraform destroy
 ```
 
 Then double-check the console for: a leftover **Elastic IP**, the **ECR images**,

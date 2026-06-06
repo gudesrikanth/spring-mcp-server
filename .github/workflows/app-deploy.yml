@@ -4,8 +4,8 @@ name: App CI/CD
 #   build → test → docker build → Trivy scan → push to ECR → deploy via SSM →
 #   wait for health → functional (MCP) smoke test.
 #
-# Requires these repo Actions *variables* (set from the bootstrap outputs):
-#   AWS_REGION, AWS_ROLE_ARN
+# Requires (set from the bootstrap outputs):
+#   - Actions secrets:   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
 # and assumes the infra (ECR + EC2) already exists (run infra.yml first).
 
 on:
@@ -26,10 +26,9 @@ on:
 
 permissions:
   contents: read
-  id-token: write # AWS OIDC
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REPO: spring-mcp-server
   IMAGE_TAG: ${{ github.sha }}
 
@@ -74,10 +73,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR

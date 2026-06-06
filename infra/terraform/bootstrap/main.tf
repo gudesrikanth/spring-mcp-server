@@ -3,12 +3,14 @@
 #
 # It creates the things the main stack and CI cannot create for themselves:
 #   1. An S3 bucket + DynamoDB table for remote Terraform state & locking.
-#   2. A GitHub OIDC identity provider, so GitHub Actions can assume an AWS
-#      role WITHOUT any long-lived access keys stored as secrets.
-#   3. An IAM role that the GitHub Actions workflows assume to deploy.
+#   2. A dedicated IAM user + access key that the GitHub Actions workflows use
+#      to authenticate to AWS (classic access key / secret credentials).
 #
 # This stack uses LOCAL state (a terraform.tfstate file committed nowhere) —
 # that's fine because it is tiny and rarely changes. See README.md.
+#
+# NOTE: this uses long-lived access keys for simplicity. They are convenient for
+# a learning project but are static secrets — rotate or delete them when done.
 ###############################################################################
 
 terraform {
@@ -75,47 +77,18 @@ resource "aws_dynamodb_table" "tf_lock" {
 }
 
 # ---------------------------------------------------------------------------
-# 2. GitHub OIDC provider — lets Actions exchange its workflow token for AWS
-#    credentials. The thumbprint is GitHub's well-known root CA thumbprint.
+# 2. IAM user + access key used by the GitHub Actions workflows.
+#    The deploy permissions are scoped to this project's resources where
+#    practical; this is a learning project, so it favours clarity.
 # ---------------------------------------------------------------------------
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+resource "aws_iam_user" "ci" {
+  name = "${var.project_name}-ci"
 }
 
-# ---------------------------------------------------------------------------
-# 3. IAM role assumed by the GitHub Actions workflows (infra + app deploy).
-#    Trust is restricted to the specific repository.
-# ---------------------------------------------------------------------------
-data "aws_iam_policy_document" "github_trust" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-    effect  = "Allow"
-    principals {
-      type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
-    }
-    condition {
-      test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-    condition {
-      test     = "StringLike"
-      variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:*"]
-    }
-  }
+resource "aws_iam_access_key" "ci" {
+  user = aws_iam_user.ci.name
 }
 
-resource "aws_iam_role" "github_actions" {
-  name               = "${var.project_name}-github-actions"
-  assume_role_policy = data.aws_iam_policy_document.github_trust.json
-}
-
-# Deploy permissions. Scoped to this project's resources where practical; this
-# is a learning project, so it favours clarity over maximal least-privilege.
 data "aws_iam_policy_document" "deploy" {
   statement {
     sid    = "TerraformState"
@@ -143,14 +116,15 @@ data "aws_iam_policy_document" "deploy" {
       "dynamodb:*",
       "iam:*",
       "ssm:*",
+      "sts:GetCallerIdentity",
       "logs:*"
     ]
     resources = ["*"]
   }
 }
 
-resource "aws_iam_role_policy" "deploy" {
+resource "aws_iam_user_policy" "deploy" {
   name   = "${var.project_name}-deploy"
-  role   = aws_iam_role.github_actions.id
+  user   = aws_iam_user.ci.name
   policy = data.aws_iam_policy_document.deploy.json
 }

@@ -25,7 +25,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for AWS OIDC
   pull-requests: write # to comment the plan on PRs
 
 env:
@@ -48,12 +47,12 @@ jobs:
         with:
           terraform_version: 1.9.8
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          audience: ://amazonaws.com
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
